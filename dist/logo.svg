@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <defs>
+    <radialGradient id="atlasVaultGlow" cx="50%" cy="34%" r="54%">
+      <stop offset="0%" stop-color="#ffd54f" stop-opacity="0.34" />
+      <stop offset="65%" stop-color="#34d399" stop-opacity="0.14" />
+      <stop offset="100%" stop-color="#143316" stop-opacity="0" />
+    </radialGradient>
+    <linearGradient id="atlasGold" x1="16" y1="8" x2="48" y2="56" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#ffe082" />
+      <stop offset="55%" stop-color="#ffd54f" />
+      <stop offset="100%" stop-color="#f59e0b" />
+    </linearGradient>
+  </defs>
+
+  <!-- Deep Conifer Medallion & Gold Ring -->
+  <circle cx="32" cy="32" r="30" fill="#143316" stroke="url(#atlasGold)" stroke-width="2.2" />
+  <circle cx="32" cy="32" r="27" fill="url(#atlasVaultGlow)" />
+
+  <!-- Celestial Sphere / Starry Dome Arcs -->
+  <path
+    d="M14 25.5C16.8 16.4 23.8 11 32 11C40.2 11 47.2 16.4 50 25.5"
+    stroke="url(#atlasGold)"
+    stroke-width="2.4"
+    stroke-linecap="round"
+  />
+  <path
+    d="M20 22.5C22.4 17.6 26.8 15 32 15C37.2 15 41.6 17.6 44 22.5"
+    stroke="#6ee7b7"
+    stroke-width="1.5"
+    stroke-linecap="round"
+    stroke-opacity="0.8"
+  />
+  <circle cx="32" cy="8.5" r="1.4" fill="#ffd54f" />
+  <circle cx="21" cy="12" r="1" fill="#ffe082" />
+  <circle cx="43" cy="12" r="1" fill="#ffe082" />
+
+  <!-- Atlas Pillars / Raised Arms & Solar Core -->
+  <path
+    d="M17.5 23.5L22.5 31.5H27.5V45.5H36.5V31.5H41.5L46.5 23.5"
+    stroke="url(#atlasGold)"
+    stroke-width="2.8"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+  <circle cx="32" cy="26.5" r="3.4" fill="#ffd54f" />
+  <circle cx="32" cy="36" r="2.2" fill="#ffe082" />
+
+  <!-- Classical Pediment Foundation -->
+  <path
+    d="M21 48.5H43M23.5 52.5H40.5"
+    stroke="url(#atlasGold)"
+    stroke-width="2.2"
+    stroke-linecap="round"
+  />
+</svg>
