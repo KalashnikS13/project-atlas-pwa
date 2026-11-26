@@ -19,14 +19,16 @@ const ATLAS_IDB_SCHEMA_VERSION = 4; // Dexie v4 stores native IDB version = 40
 const SW_CONFIG_REQUEST = '/__atlas_sw_config__';
 const SW_AUDIT_STATE_REQUEST = '/__atlas_periodic_audit__';
 
+const resolveScopedUrl = (relativePath) => new URL(relativePath, self.registration.scope).href;
+
 const STATIC_ASSETS = [
-  '/',
-  '/index.html',
-  '/manifest.json',
-  '/logo.jpg',
-  '/logo.svg',
-  '/icon.svg',
-  '/apple-touch-icon.png'
+  './',
+  './index.html',
+  './manifest.json',
+  './logo.jpg',
+  './logo.svg',
+  './icon.svg',
+  './apple-touch-icon.png'
 ];
 
 const MAX_API_ENTRIES = 50;
@@ -35,6 +37,7 @@ const MAX_OPAQUE_ENTRIES = 15;
 
 const AUTH_BYPASS_HOSTS = [
   'accounts.google.com',
+  'apis.google.com',
   'oauth2.googleapis.com',
   'identitytoolkit.googleapis.com',
   'securetoken.googleapis.com',
@@ -53,7 +56,9 @@ const EMPTY_ROLLOVER_SUMMARY = Object.freeze({
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(STATIC_CACHE_NAME).then((cache) => cache.addAll(STATIC_ASSETS))
+    caches
+      .open(STATIC_CACHE_NAME)
+      .then((cache) => cache.addAll(STATIC_ASSETS.map(resolveScopedUrl)))
   );
 });
 
@@ -167,7 +172,10 @@ async function writeLastPeriodicAuditState(state) {
 async function probeHttpUtcOffset(fallbackOffsetMs) {
   try {
     const started = Date.now();
-    const res = await fetch('/manifest.json', { method: 'HEAD', cache: 'no-store' });
+    const res = await fetch(resolveScopedUrl('./manifest.json'), {
+      method: 'HEAD',
+      cache: 'no-store'
+    });
     const ended = Date.now();
     const dateHeader = res.headers.get('Date');
     if (dateHeader) {
@@ -428,8 +436,8 @@ async function runPeriodicBusinessDayAudit() {
     });
     await self.registration.showNotification('Project Atlas', {
       body: `Бізнес-день ${businessDate}: не зафіксовано вчорашній звіт (${auditSummary.missedYesterdayCount}). Відкрийте додаток.`,
-      icon: '/apple-touch-icon.png',
-      badge: '/icon.svg',
+      icon: resolveScopedUrl('./apple-touch-icon.png'),
+      badge: resolveScopedUrl('./icon.svg'),
       tag: 'atlas-business-day-audit'
     });
   }
@@ -469,20 +477,21 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // A. SPA Navigation: Network-First with pre-cached /index.html fallback
+  // A. SPA Navigation: Network-First with pre-cached scoped index.html fallback
   if (event.request.mode === 'navigate') {
+    const indexShellUrl = resolveScopedUrl('./index.html');
     event.respondWith(
       fetch(event.request)
         .then((response) => {
           if (response && response.status === 200) {
             const clone = response.clone();
             caches.open(STATIC_CACHE_NAME).then((cache) => {
-              void cache.put('/index.html', clone);
+              void cache.put(indexShellUrl, clone);
             });
           }
           return response;
         })
-        .catch(() => caches.match('/index.html'))
+        .catch(() => caches.match(indexShellUrl))
     );
     return;
   }
@@ -562,8 +571,8 @@ self.addEventListener('push', (event) => {
   const title = data.title || 'Project Atlas';
   const options = {
     body: data.body || 'Системне сповіщення.',
-    icon: '/apple-touch-icon.png',
-    badge: '/icon.svg',
+    icon: resolveScopedUrl('./apple-touch-icon.png'),
+    badge: resolveScopedUrl('./icon.svg'),
     tag: data.tag || 'atlas-system-notification'
   };
   event.waitUntil(self.registration.showNotification(title, options));
@@ -571,16 +580,17 @@ self.addEventListener('push', (event) => {
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
+  const scopeUrl = resolveScopedUrl('./');
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
       for (let i = 0; i < windowClients.length; i++) {
         const client = windowClients[i];
-        if (client.url.includes('/') && 'focus' in client) {
+        if (client.url.startsWith(scopeUrl) && 'focus' in client) {
           return client.focus();
         }
       }
       if (self.clients.openWindow) {
-        return self.clients.openWindow('/');
+        return self.clients.openWindow(scopeUrl);
       }
     })
   );
