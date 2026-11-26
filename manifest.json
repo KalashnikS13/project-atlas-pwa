@@ -1,24 +1,24 @@
 {
-  "id": "/",
+  "id": "/project-atlas-pwa/",
   "name": "Створення Атланту",
   "short_name": "Atlas",
   "description": "PWA System for Contract Management",
   "author": "Kalashnyk Serhii Anatoliiovych (KSA)",
-  "start_url": "/",
-  "scope": "/",
+  "start_url": "/project-atlas-pwa/",
+  "scope": "/project-atlas-pwa/",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#f4f7f4",
   "theme_color": "#1e4620",
   "icons": [
     {
-      "src": "/icon.svg",
+      "src": "./icon.svg",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any"
     },
     {
-      "src": "/apple-touch-icon.png",
+      "src": "./apple-touch-icon.png",
       "sizes": "180x180",
       "type": "image/png",
       "purpose": "any"
