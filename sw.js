@@ -9,7 +9,7 @@
  * - Push Notification & notification click focus handling
  */
 
-const STATIC_CACHE_NAME = 'atlas-static-v6';
+const STATIC_CACHE_NAME = 'atlas-static-v8';
 const API_CACHE_NAME = 'atlas-api-v6';
 const META_CACHE_NAME = 'atlas-meta-v1';
 
@@ -24,11 +24,13 @@ const resolveScopedUrl = (relativePath) => new URL(relativePath, self.registrati
 const STATIC_ASSETS = [
   './',
   './index.html',
-  './manifest.json',
+  './manifest.json?v=2',
   './logo.jpg',
   './logo.svg',
-  './icon.svg',
-  './apple-touch-icon.png'
+  './icon.svg?v=2',
+  './apple-touch-icon.png?v=2',
+  './pwa-192x192.png?v=2',
+  './pwa-512x512.png?v=2'
 ];
 
 const MAX_API_ENTRIES = 50;
