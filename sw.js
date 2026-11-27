@@ -9,7 +9,7 @@
  * - Push Notification & notification click focus handling
  */
 
-const STATIC_CACHE_NAME = 'atlas-static-v8';
+const STATIC_CACHE_NAME = 'atlas-static-v9';
 const API_CACHE_NAME = 'atlas-api-v6';
 const META_CACHE_NAME = 'atlas-meta-v1';
 
