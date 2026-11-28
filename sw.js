@@ -1,15 +1,15 @@
 /**
- * Service Worker for Project Atlas PWA (v6)
- * - Cache namespaces: `atlas-static-v6`, `atlas-api-v6`, `atlas-meta-v1`
+ * Service Worker for Project Atlas PWA (v10)
+ * - Cache namespaces: `atlas-static-v10`, `atlas-api-v6`, `atlas-meta-v1`
  * - Controlled updates via `SKIP_WAITING` + UpdateToast UI
- * - Pre-cached App Shell, Network-First SPA navigation & Drive reads, SWR assets
+ * - Pre-cached App Shell with guaranteed offline Navigation Fallback (`index.html`), Network-First Drive reads, SWR assets
  * - Bypass for OAuth/Firebase Auth endpoints and non-GET mutations
  * - Chromium Background Sync (`sync-offline-mutations`)
  * - Web Periodic Background Sync (`atlas-business-day-audit`) backed by `AtlasOfflineDB` (Dexie v4)
  * - Push Notification & notification click focus handling
  */
 
-const STATIC_CACHE_NAME = 'atlas-static-v9';
+const STATIC_CACHE_NAME = 'atlas-static-v10';
 const API_CACHE_NAME = 'atlas-api-v6';
 const META_CACHE_NAME = 'atlas-meta-v1';
 
@@ -28,6 +28,7 @@ const STATIC_ASSETS = [
   './logo.jpg',
   './logo.svg',
   './icon.svg?v=2',
+  './apple-touch-icon.png',
   './apple-touch-icon.png?v=2',
   './pwa-192x192.png?v=2',
   './pwa-512x512.png?v=2'
@@ -468,6 +469,23 @@ async function trimCache(cacheName, maxItems) {
 // 4. Fetch Strategies
 // ----------------------------------------------------------------------------
 
+async function getCachedAppShell() {
+  const indexShellUrl = resolveScopedUrl('./index.html');
+  const rootShellUrl = resolveScopedUrl('./');
+  try {
+    const staticCache = await caches.open(STATIC_CACHE_NAME);
+    const cachedIndex = await staticCache.match(indexShellUrl, { ignoreSearch: true });
+    if (cachedIndex) return cachedIndex;
+    const cachedRoot = await staticCache.match(rootShellUrl, { ignoreSearch: true });
+    if (cachedRoot) return cachedRoot;
+  } catch {
+    // Fallback to global cache match below
+  }
+  const anyIndex = await caches.match(indexShellUrl, { ignoreSearch: true });
+  if (anyIndex) return anyIndex;
+  return caches.match(rootShellUrl, { ignoreSearch: true });
+}
+
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
 
@@ -479,21 +497,40 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // A. SPA Navigation: Network-First with pre-cached scoped index.html fallback
-  if (event.request.mode === 'navigate') {
+  // A. SPA Navigation: Network-First with guaranteed cached `index.html` Navigation Fallback
+  if (event.request.mode === 'navigate' || event.request.destination === 'document') {
     const indexShellUrl = resolveScopedUrl('./index.html');
     event.respondWith(
-      fetch(event.request)
-        .then((response) => {
-          if (response && response.status === 200) {
-            const clone = response.clone();
-            caches.open(STATIC_CACHE_NAME).then((cache) => {
-              void cache.put(indexShellUrl, clone);
-            });
+      (async () => {
+        const cachedShell = await getCachedAppShell();
+        const networkPromise = fetch(event.request)
+          .then((response) => {
+            if (response && response.ok && response.status === 200) {
+              const clone = response.clone();
+              event.waitUntil(
+                caches.open(STATIC_CACHE_NAME).then((cache) => cache.put(indexShellUrl, clone))
+              );
+            }
+            return response;
+          })
+          .catch(() => null);
+
+        if (cachedShell) {
+          event.waitUntil(networkPromise);
+          const timedNetwork = await Promise.race([
+            networkPromise,
+            new Promise((resolve) => setTimeout(() => resolve(null), 2500))
+          ]);
+          if (timedNetwork && timedNetwork.ok) {
+            return timedNetwork;
           }
-          return response;
-        })
-        .catch(() => caches.match(indexShellUrl))
+          return cachedShell;
+        }
+
+        const fresh = await networkPromise;
+        if (fresh) return fresh;
+        return (await getCachedAppShell()) || Response.error();
+      })()
     );
     return;
   }
@@ -519,24 +556,27 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // C. Static Assets & App Shell: Stale-While-Revalidate
+  // C. Static Assets & App Shell: Stale-While-Revalidate (with ignoreSearch fallback)
   event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      const fetchPromise = fetch(event.request)
-        .then((networkResponse) => {
-          const isValidStatus = networkResponse.status === 200 || networkResponse.status === 0;
-          if (networkResponse && isValidStatus) {
-            caches.open(STATIC_CACHE_NAME).then(async (cache) => {
-              await cache.put(event.request, networkResponse.clone());
-              await trimCache(STATIC_CACHE_NAME, MAX_STATIC_ENTRIES);
-            });
-          }
-          return networkResponse;
-        })
-        .catch(() => cachedResponse);
+    caches
+      .match(event.request)
+      .then((exactMatch) => exactMatch || caches.match(event.request, { ignoreSearch: true }))
+      .then((cachedResponse) => {
+        const fetchPromise = fetch(event.request)
+          .then((networkResponse) => {
+            const isValidStatus = networkResponse.status === 200 || networkResponse.status === 0;
+            if (networkResponse && isValidStatus) {
+              caches.open(STATIC_CACHE_NAME).then(async (cache) => {
+                await cache.put(event.request, networkResponse.clone());
+                await trimCache(STATIC_CACHE_NAME, MAX_STATIC_ENTRIES);
+              });
+            }
+            return networkResponse;
+          })
+          .catch(() => cachedResponse);
 
-      return cachedResponse || fetchPromise;
-    })
+        return cachedResponse || fetchPromise;
+      })
   );
 });
 
